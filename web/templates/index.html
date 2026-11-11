@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>智选投研 | A股量化工作台</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v=20260717-6">
+  <script defer src="{{ url_for('static', filename='vendor/echarts.min.js') }}?v=20260717-6"></script>
+  <script defer src="{{ url_for('static', filename='vendor/lucide.min.js') }}?v=20260717-6"></script>
+  <script defer src="{{ url_for('static', filename='app.js') }}?v=20260717-6"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <a class="brand" href="#dashboard" data-route="dashboard">
+        <span class="brand-mark">Q</span>
+        <span><strong>智选投研</strong><small>A股研究工作台</small></span>
+      </a>
+      <nav class="side-nav">
+        <a href="#dashboard" data-route="dashboard"><i data-lucide="layout-dashboard"></i><span>仪表盘</span></a>
+        <a href="#daily" data-route="daily"><i data-lucide="scan-search"></i><span>每日研究</span></a>
+        <a href="#history" data-route="history"><i data-lucide="history"></i><span>运行历史</span></a>
+        <a href="#stocks" data-route="stocks"><i data-lucide="search"></i><span>股票画像</span></a>
+        <a href="#data" data-route="data"><i data-lucide="database"></i><span>数据中心</span></a>
+        <a href="#models" data-route="models"><i data-lucide="brain-circuit"></i><span>模型审计</span></a>
+        <a href="#factors" data-route="factors"><i data-lucide="flask-conical"></i><span>因子验证</span></a>
+        <a href="#portfolio" data-route="portfolio"><i data-lucide="briefcase-business"></i><span>持仓观察</span></a>
+        <a href="#backtests" data-route="backtests"><i data-lucide="chart-no-axes-combined"></i><span>基准回测</span></a>
+        <a href="#reviews" data-route="reviews"><i data-lucide="notebook-pen"></i><span>复盘记录</span></a>
+        <a href="#jobs" data-route="jobs"><i data-lucide="list-checks"></i><span>任务中心</span><b id="jobBadge" hidden>0</b></a>
+      </nav>
+      <div class="research-notice">
+        <i data-lucide="shield-alert"></i>
+        <div><strong>研究模式</strong><span>只筛选、审计和记录，不输出金额、股数或自动下单。</span></div>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div>
+          <h1 id="pageTitle">仪表盘</h1>
+          <p id="pageSubtitle">数据、研究门禁与任务状态</p>
+        </div>
+        <div class="top-actions">
+          <div class="quick-search">
+            <i data-lucide="search"></i>
+            <input id="globalStockSearch" aria-label="股票搜索" placeholder="代码或中文名称">
+            <button class="icon-button" id="globalSearchBtn" title="搜索股票" aria-label="搜索股票"><i data-lucide="arrow-right"></i></button>
+          </div>
+          <span class="health-pill" id="healthPill"><i data-lucide="circle-dot"></i><span>连接中</span></span>
+        </div>
+      </header>
+
+      <main>
+        <section class="page active" data-page="dashboard">
+          <div class="metric-strip" id="dashboardMetrics">
+            <div><span>最新完整数据</span><strong>--</strong><small>等待读取</small></div>
+            <div><span>研究门禁</span><strong>--</strong><small>等待读取</small></div>
+            <div><span>纸面信号日</span><strong>--</strong><small>至少 40 日</small></div>
+            <div><span>活动任务</span><strong>--</strong><small>队列与运行中</small></div>
+          </div>
+          <div class="section-heading"><div><h2>当前研究状态</h2><p>结论优先显示，不能把诊断候选误写成可用策略。</p></div><button class="secondary" data-action="refresh-dashboard"><i data-lucide="refresh-cw"></i>刷新</button></div>
+          <div class="status-banner" id="researchBanner">正在读取研究门禁...</div>
+          <div class="dashboard-grid">
+            <div class="tool-panel"><div class="panel-title"><h3>数据覆盖</h3><span>最新交易日真实记录</span></div><div class="chart" id="coverageChart"></div></div>
+            <div class="tool-panel"><div class="panel-title"><h3>市场状态审核</h3><span>v10 隔离审核</span></div><div id="marketGateSummary" class="key-value-list"></div></div>
+          </div>
+          <div class="section-heading compact"><div><h2>最近研究版本</h2><p>所有版本不可覆盖。</p></div><a href="#history" class="text-link">查看全部</a></div>
+          <div class="table-shell"><table><thead><tr><th>日期</th><th>版本</th><th>状态</th><th>市场决策</th><th>模型</th><th>完成时间</th><th></th></tr></thead><tbody id="dashboardRunRows"><tr><td colspan="7" class="empty">暂无记录</td></tr></tbody></table></div>
+        </section>
+
+        <section class="page" data-page="daily">
+          <div class="section-heading"><div><h2>v11 Top5 每日研究</h2><p>完整链路包含数据、门禁、快照、评分、市场状态、三本账与日报。</p></div></div>
+          <div class="run-console">
+            <div class="form-row">
+              <label>交易日期<input id="dailyTradeDate" inputmode="numeric" maxlength="8" placeholder="YYYYMMDD"></label>
+              <label>运行模式<select id="dailyExecutionMode"><option value="skip_sync">使用已同步数据</option><option value="full">完整同步并运行</option></select></label>
+              <button class="primary" id="preflightBtn"><i data-lucide="scan-line"></i>数据预检</button>
+              <button class="primary action" id="runDailyBtn"><i data-lucide="play"></i>开始每日研究</button>
+            </div>
+            <div id="preflightBox" class="preflight-box">选择交易日期后进行预检。</div>
+          </div>
+          <div id="dailyJobPanel" class="job-progress" hidden>
+            <div><span id="dailyJobStage">等待 Worker</span><b id="dailyJobPct">0%</b></div>
+            <div class="progress-track"><span id="dailyJobBar"></span></div>
+            <p id="dailyJobMessage">任务已进入队列</p>
+          </div>
+          <div id="dailyEmpty" class="empty-state"><i data-lucide="calendar-search"></i><strong>尚未选择研究版本</strong><span>运行新任务或从历史记录打开一个不可变版本。</span></div>
+          <div id="dailyResult" hidden>
+            <div class="result-header"><div><span id="runVersionLabel">--</span><h2 id="runDecision">--</h2><p id="runMeta">--</p></div><div id="runBadges" class="badges"></div></div>
+            <div class="tabbar" role="tablist">
+              <button class="active" data-ledger-tab="research">系统 Top5</button>
+              <button data-ledger-tab="portfolio">默认 70/30 纸面组合</button>
+              <button data-ledger-tab="manual">我的人工选择</button>
+              <button data-ledger-tab="audit">审计与证据</button>
+            </div>
+            <div id="ledgerResearch" class="ledger-view active"><div class="candidate-layout"><div class="candidate-list" id="candidateList"></div><div class="candidate-inspector"><div class="chart" id="candidateRadar"></div><div id="candidateEvidence" class="evidence-list"></div></div></div></div>
+            <div id="ledgerPortfolio" class="ledger-view"><div id="portfolioLedger" class="table-shell"></div></div>
+            <div id="ledgerManual" class="ledger-view"><div id="manualLedger" class="table-shell"></div></div>
+            <div id="ledgerAudit" class="ledger-view"><div id="auditLedger" class="audit-grid"></div></div>
+          </div>
+        </section>
+
+        <section class="page" data-page="history">
+          <div class="section-heading"><div><h2>不可变运行历史</h2><p>同一日期可保存多个版本；失败和中断同样保留。</p></div><div class="form-row compact"><input id="historyDate" maxlength="8" placeholder="按 YYYYMMDD 筛选"><button class="secondary" id="historyRefresh"><i data-lucide="search"></i>查询</button><button class="secondary" id="compareRunsBtn" disabled><i data-lucide="columns-2"></i>对比所选</button></div></div>
+          <div id="historyMetrics" class="metric-strip"></div>
+          <div class="tool-panel"><div class="panel-title"><h3>5日结算全日历曲线</h3><span>最新完成版本；no_signal 日收益记为 0</span></div><div class="chart" id="historyEquityChart"></div></div>
+          <div class="table-shell"><table><thead><tr><th></th><th>日期</th><th>版本</th><th>链路</th><th>模式</th><th>状态</th><th>决策</th><th>模型</th><th>时间</th><th></th></tr></thead><tbody id="historyRows"><tr><td colspan="10" class="empty">正在读取...</td></tr></tbody></table></div>
+          <div id="comparePanel" class="compare-grid" hidden></div>
+        </section>
+
+        <section class="page" data-page="stocks">
+          <div class="section-heading"><div><h2>全市场股票画像</h2><p>支持股票代码、纯数字代码和中文名称；所有缺失因子明确标记。</p></div></div>
+          <div class="form-row stock-search-row"><input id="stockSearchInput" placeholder="输入 601899 / 601899.SH / 紫金矿业"><button class="primary" id="stockSearchBtn"><i data-lucide="search"></i>搜索</button></div>
+          <div id="stockSearchResults" class="search-results"></div>
+          <div id="stockProfile" class="stock-profile" hidden>
+            <div class="stock-profile-head"><div><span id="stockCode">--</span><h2 id="stockName">--</h2><p id="stockIndustry">--</p></div><div class="badges" id="stockBadges"></div></div>
+            <div class="dashboard-grid"><div class="tool-panel"><div class="chart" id="stockRadar"></div></div><div class="tool-panel"><div id="stockFactorDetails" class="key-value-list"></div></div></div>
+            <div class="tool-panel"><div class="panel-title"><h3>数据质量与风险</h3><span id="stockDataDate">--</span></div><div id="stockQuality" class="evidence-list"></div></div>
+          </div>
+        </section>
+
+        <section class="page" data-page="data">
+          <div class="section-heading"><div><h2>数据中心</h2><p>上市股票池和历史累计记录分开统计，所有同步任务可追踪。</p></div><button class="secondary" id="dataRefresh"><i data-lucide="refresh-cw"></i>刷新</button></div>
+          <div class="form-row"><label>检查日期<input id="dataTradeDate" maxlength="8" placeholder="YYYYMMDD"></label><button class="secondary" data-data-job="stock_universe"><i data-lucide="list-restart"></i>同步上市股票池</button><button class="secondary" data-data-job="daily_snapshot"><i data-lucide="database-backup"></i>同步完整日快照</button><button class="secondary" data-data-job="moneyflow"><i data-lucide="landmark"></i>同步资金流</button><button class="secondary" data-data-job="daily_basic"><i data-lucide="table-properties"></i>同步每日指标</button></div>
+          <div class="metric-strip" id="dataMetrics"></div>
+          <div class="dashboard-grid"><div class="tool-panel"><div class="panel-title"><h3>交易日组件覆盖</h3><span id="dataCoverageDate">--</span></div><div class="chart" id="dataCoverageChart"></div></div><div class="tool-panel"><div class="panel-title"><h3>最新同步时间</h3><span>真实 Tushare 记录</span></div><div id="latestDataDates" class="key-value-list"></div></div></div>
+          <div class="tool-panel"><div class="panel-title"><h3>财务与事件端点</h3><span>数据库原始记录数，不伪造缺失项</span></div><div id="rawEndpointTable" class="table-shell"></div></div>
+          <div class="tool-panel"><div class="panel-title"><h3>历史财务与事件可用性审计</h3><span>按公告日严格早于信号日；检查点不替代全历史覆盖</span></div><div id="historicalAuditSummary" class="evidence-list"></div><div id="historicalAuditTable" class="table-shell"></div></div>
+        </section>
+
+        <section class="page" data-page="models">
+          <div class="section-heading"><div><h2>模型审计</h2><p>模型选择期与最终隔离审核分开展示。</p></div><button class="secondary" id="modelRefresh"><i data-lucide="refresh-cw"></i>刷新报告</button></div>
+          <div id="modelGateBanner" class="status-banner">等待读取</div>
+          <div class="dashboard-grid"><div class="tool-panel"><div class="panel-title"><h3>模型窗口表现</h3><span>仅诊断，不代表最终 OOS</span></div><div class="chart" id="modelChart"></div></div><div class="tool-panel"><div class="panel-title"><h3>审计结论</h3><span>晋升状态</span></div><div id="modelAudit" class="key-value-list"></div></div></div>
+          <div class="table-shell"><table><thead><tr><th>模型</th><th>目标</th><th>平均净收益</th><th>最强窗口</th><th>最弱窗口</th></tr></thead><tbody id="modelRows"></tbody></table></div>
+          <div class="tool-panel"><div class="panel-title"><h3>最终隔离失败归因</h3><span>描述性审计，不用于反向调参</span></div><div id="failureWindowAudit" class="table-shell"><div class="empty">等待读取冻结审计报告</div></div></div>
+        </section>
+
+        <section class="page" data-page="factors">
+          <div class="section-heading"><div><h2>Factor Lab 验证</h2><p>窗口化因子验证通过任务队列执行，刷新页面不会丢失。</p></div></div>
+          <div class="form-row"><fieldset class="check-group"><legend>收益周期</legend><label><input type="checkbox" value="1" checked>1日</label><label><input type="checkbox" value="3" checked>3日</label><label><input type="checkbox" value="5" checked>5日</label><label><input type="checkbox" value="10" checked>10日</label><label><input type="checkbox" value="20" checked>20日</label></fieldset><button class="primary action" id="runFactorBtn"><i data-lucide="play"></i>执行验证</button></div>
+          <div class="metric-strip" id="factorMetrics"></div>
+          <div class="dashboard-grid"><div class="tool-panel"><div class="chart" id="factorChart"></div></div><div class="tool-panel"><div id="factorWindows" class="key-value-list"></div></div></div>
+          <div class="table-shell"><table><thead><tr><th>因子</th><th>周期</th><th>结论</th><th>可用窗口</th><th>观察窗口</th><th>失败窗口</th></tr></thead><tbody id="factorRows"><tr><td colspan="6" class="empty">运行后显示验证结果</td></tr></tbody></table></div>
+        </section>
+
+        <section class="page" data-page="portfolio">
+          <div class="section-heading"><div><h2>持仓观察</h2><p>资金分配与买卖数量由人工决定；系统只提供盈亏、风险和观察倾向。</p></div><button class="secondary" id="portfolioRefresh"><i data-lucide="refresh-cw"></i>刷新</button></div>
+          <form id="positionForm" class="form-row"><input name="ts_code" placeholder="600519.SH" required><input name="name" placeholder="股票名称" required><input name="buy_price" type="number" min="0.01" step="0.01" placeholder="成本价" required><input name="quantity" type="number" min="100" step="100" placeholder="数量" required><button class="primary" type="submit"><i data-lucide="plus"></i>添加观察</button></form>
+          <div class="metric-strip" id="portfolioMetrics"></div>
+          <div class="dashboard-grid"><div class="tool-panel"><div class="chart" id="portfolioChart"></div></div><div class="tool-panel"><div id="portfolioRisks" class="evidence-list"></div></div></div>
+          <div class="table-shell"><table><thead><tr><th>代码</th><th>名称</th><th>成本</th><th>现价</th><th>数量</th><th>盈亏</th><th>风险</th><th></th></tr></thead><tbody id="positionRows"><tr><td colspan="8" class="empty">暂无持仓观察</td></tr></tbody></table></div>
+        </section>
+
+        <section class="page" data-page="backtests">
+          <div class="section-heading"><div><h2>基准回测</h2><p>作为模型与规则的对照，不生成交易承诺。</p></div></div>
+          <form id="backtestForm" class="form-row"><input name="ts_code" placeholder="600519.SH" required><input name="start_date" maxlength="8" placeholder="开始日期 YYYYMMDD" required><input name="end_date" maxlength="8" placeholder="结束日期 YYYYMMDD" required><button class="primary" type="submit"><i data-lucide="play"></i>运行买入持有基准</button></form>
+          <div id="backtestMetrics" class="metric-strip"></div>
+          <div class="tool-panel"><div class="chart" id="backtestChart"></div></div>
+          <div class="table-shell"><table><thead><tr><th>运行 ID</th><th>区间</th><th>初始值</th><th>最终值</th><th>收益率</th><th>最大回撤</th><th>时间</th></tr></thead><tbody id="backtestRows"><tr><td colspan="7" class="empty">暂无回测</td></tr></tbody></table></div>
+        </section>
+
+        <section class="page" data-page="reviews">
+          <div class="section-heading"><div><h2>复盘记录</h2><p>人工判断独立保存，不回写模型标签。</p></div></div>
+          <form id="reviewForm" class="review-form"><div class="form-row"><input name="title" placeholder="复盘标题" required><input name="ts_code" placeholder="股票代码，可空"><select name="category"><option value="daily">每日复盘</option><option value="candidate">候选复核</option><option value="risk">风险记录</option></select></div><textarea name="content" rows="5" placeholder="记录新闻核验、盘前信息、判断依据和执行风险" required></textarea><div class="form-row"><input name="tags" placeholder="标签，用逗号分隔"><button class="primary" type="submit"><i data-lucide="save"></i>保存复盘</button></div></form>
+          <div id="reviewTimeline" class="timeline"><div class="empty-state small">暂无复盘记录</div></div>
+        </section>
+
+        <section class="page" data-page="jobs">
+          <div class="section-heading"><div><h2>任务中心</h2><p>排队、运行、失败、中断与完成都可追踪。</p></div><button class="secondary" id="jobsRefresh"><i data-lucide="refresh-cw"></i>刷新</button></div>
+          <div class="table-shell"><table><thead><tr><th>任务</th><th>日期</th><th>状态</th><th>阶段</th><th>进度</th><th>创建</th><th>完成</th><th></th></tr></thead><tbody id="jobRows"><tr><td colspan="8" class="empty">暂无任务</td></tr></tbody></table></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+</body>
+</html>

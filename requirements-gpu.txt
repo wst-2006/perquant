@@ -1,0 +1,14 @@
+pandas==3.0.3
+numpy==1.26.4
+scikit-learn==1.9.0
+lightgbm==4.6.0
+xgboost==3.2.0
+catboost==1.2.10
+joblib==1.5.3
+python-dotenv==1.0.1
+sqlalchemy==2.0.30
+psycopg2-binary==2.9.9
+requests==2.34.2
+tushare==1.4.20
+pytest==8.2.0
+pyarrow>=16.0.0
